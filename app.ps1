@@ -14,19 +14,29 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
     exit
 }
 
+# Load required assemblies
 Add-Type -AssemblyName PresentationFramework | Out-Null
 Add-Type -AssemblyName System.Drawing | Out-Null
 
 $username = $env:USERNAME
 
+# --- XAML DEFINITION ---
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Optimizations" Height="650" Width="850"
+        Title="PowerShell Manager (Power User)" Height="650" Width="850"
         WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
-        Background="#F5F5F5" FontFamily="Segoe UI">
+        Background="#F5F5F5" FontFamily="Segoe UI" x:Name="MainWindow">
 
     <Window.Resources>
+        <SolidColorBrush x:Key="WindowBackground" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="PanelBackground" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#333333"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#777777"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#007ACC"/>
+        <SolidColorBrush x:Key="BorderColor" Color="#DDDDDD"/>
+        <SolidColorBrush x:Key="DisabledText" Color="#AAAAAA"/>
+
         <Style TargetType="TabItem">
             <Setter Property="Template">
                 <Setter.Value>
@@ -40,8 +50,8 @@ $username = $env:USERNAME
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Panel" Property="Background" Value="#FFFFFF"/>
-                                <Setter Property="Foreground" Value="#007ACC"/>
+                                <Setter TargetName="Panel" Property="Background" Value="{DynamicResource PanelBackground}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentColor}"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter TargetName="Panel" Property="Effect">
                                     <Setter.Value>
@@ -51,7 +61,7 @@ $username = $env:USERNAME
                             </Trigger>
                             <Trigger Property="IsSelected" Value="False">
                                 <Setter TargetName="Panel" Property="Background" Value="Transparent"/>
-                                <Setter Property="Foreground" Value="#777777"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Foreground" Value="#005A9E"/>
@@ -64,13 +74,13 @@ $username = $env:USERNAME
         
         <Style TargetType="GroupBox">
             <Setter Property="Padding" Value="15"/>
-            <Setter Property="BorderBrush" Value="#DDDDDD"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderColor}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="White"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBackground}"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="#007ACC" Margin="5,0,5,0"/>
+                        <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="{DynamicResource AccentColor}" Margin="5,0,5,0"/>
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
@@ -118,16 +128,23 @@ $username = $env:USERNAME
         <Style TargetType="CheckBox">
             <Setter Property="Margin" Value="0,4"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Foreground" Value="#444"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
             <Style.Triggers>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#AAAAAA"/>
+                    <Setter Property="Foreground" Value="{DynamicResource DisabledText}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         
         <Style TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="Width" Value="200"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
         </Style>
     </Window.Resources>
 
@@ -137,11 +154,11 @@ $username = $env:USERNAME
             <TabItem Header="Tweaks">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20">
-                    
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="20"/> <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <GroupBox Header="Essentials" Grid.Column="0" VerticalAlignment="Top">
@@ -203,7 +220,7 @@ $username = $env:USERNAME
 
                     <TextBlock Grid.Row="0" Text="Select System Packages to Remove:" FontWeight="SemiBold" Margin="0,0,0,10"/>
                     
-                    <Border Grid.Row="1" BorderBrush="#DDD" BorderThickness="1" Background="White" Padding="10">
+                    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderColor}" BorderThickness="1" Background="{DynamicResource PanelBackground}" Padding="10">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel x:Name="AppListStack" />
                         </ScrollViewer>
@@ -223,8 +240,20 @@ $username = $env:USERNAME
             <TabItem Header="Config">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20">
+                        <GroupBox Header="General" Margin="0,0,0,15">
+                            <StackPanel>
+                                <TextBlock Text="App Theme Mode:" Margin="0,0,0,5"/>
+                                <ComboBox x:Name="CmbTheme" SelectedIndex="0">
+                                    <ComboBoxItem Content="System (Auto)"/>
+                                    <ComboBoxItem Content="Light"/>
+                                    <ComboBoxItem Content="Dark"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </GroupBox>
+
                         <GroupBox Header="Safety Override" Margin="0,0,0,15">
                             <StackPanel>
+                                <TextBlock Text="Warning: Unlocking critical apps and aggressive tweaks may result in system instability." Foreground="{DynamicResource TextSecondary}" Margin="0,0,0,10" TextWrapping="Wrap"/>
                                 
                                 <CheckBox x:Name="ChkAllowUnsafeSettings" 
                                           Content="Allow unsafe tweaks" 
@@ -243,7 +272,7 @@ $username = $env:USERNAME
                    VerticalAlignment="Top" 
                    Margin="0,15,20,0" 
                    FontSize="14" 
-                   Foreground="#777" 
+                   Foreground="{DynamicResource TextSecondary}" 
                    FontWeight="SemiBold"/>
                    
     </Grid>
@@ -267,40 +296,94 @@ $btnRefreshApps = $window.FindName("BtnRefreshApps")
 $progressBar = $window.FindName("RemoveProgress")
 $chkAllowUnsafeSettings = $window.FindName("ChkAllowUnsafeSettings")
 $btnApplyTweaks = $window.FindName("BtnApplyTweaks")
+$cmbTheme = $window.FindName("CmbTheme")
+$mainWindow = $window.FindName("MainWindow")
 
-# Essential
+# Checkboxes
 $chkTelemetry = $window.FindName("ChkTelemetry")
 $chkActivity = $window.FindName("ChkActivity")
 $chkLocation = $window.FindName("ChkLocation")
 $chkHomeGroup = $window.FindName("ChkHomeGroup")
 $chkOneDrive = $window.FindName("ChkOneDrive")
-
-# Miscellaneous
 $chkSticky = $window.FindName("ChkSticky")
 $chkHiddenFiles = $window.FindName("ChkHiddenFiles")
 $chkDisableBing = $window.FindName("ChkDisableBing")
-
-# Advanced
 $chkRemoveEdge = $window.FindName("ChkRemoveEdge")
 $chkTrackingAggressive = $window.FindName("ChkTrackingAggressive")
 $chkDisableUAC = $window.FindName("ChkDisableUAC")
 $chkDisableNotif = $window.FindName("ChkDisableNotif")
 
-# Group the advanced checkboxes for easy toggling (Removed Cortana)
 $advancedTweaksList = @($chkRemoveEdge, $chkTrackingAggressive, $chkDisableUAC, $chkDisableNotif)
+
+
+# --- Theme Handling Logic (Fixed: Inline conversion to avoid PSObject wrapping) ---
+
+function Set-Theme {
+    param([string]$Mode) # "Light", "Dark"
+
+    # Create Converter inline
+    $converter = New-Object System.Windows.Media.BrushConverter
+
+    if ($Mode -eq "Dark") {
+        $mainWindow.Resources["WindowBackground"] = $converter.ConvertFromString("#1E1E1E")
+        $mainWindow.Resources["PanelBackground"] = $converter.ConvertFromString("#2D2D30")
+        $mainWindow.Resources["TextPrimary"] = $converter.ConvertFromString("#FFFFFF")
+        $mainWindow.Resources["TextSecondary"] = $converter.ConvertFromString("#AAAAAA")
+        $mainWindow.Resources["BorderColor"] = $converter.ConvertFromString("#3E3E42")
+        $mainWindow.Resources["DisabledText"] = $converter.ConvertFromString("#555555")
+        
+        $mainWindow.Background = $mainWindow.Resources["WindowBackground"]
+    }
+    else {
+        # Light
+        $mainWindow.Resources["WindowBackground"] = $converter.ConvertFromString("#F5F5F5")
+        $mainWindow.Resources["PanelBackground"] = $converter.ConvertFromString("#FFFFFF")
+        $mainWindow.Resources["TextPrimary"] = $converter.ConvertFromString("#333333")
+        $mainWindow.Resources["TextSecondary"] = $converter.ConvertFromString("#777777")
+        $mainWindow.Resources["BorderColor"] = $converter.ConvertFromString("#DDDDDD")
+        $mainWindow.Resources["DisabledText"] = $converter.ConvertFromString("#AAAAAA")
+        
+        $mainWindow.Background = $mainWindow.Resources["WindowBackground"]
+    }
+}
+
+function Check-SystemTheme {
+    try {
+        $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+        $val = Get-ItemProperty -Path $regPath -Name "AppsUseLightTheme" -ErrorAction SilentlyContinue
+        if ($val -and $val.AppsUseLightTheme -eq 0) { return "Dark" }
+        return "Light"
+    }
+    catch { return "Light" }
+}
+
+$cmbTheme.Add_SelectionChanged({
+        $selected = $cmbTheme.SelectedItem.Content
+        if ($selected -eq "System (Auto)") {
+            $sysMode = Check-SystemTheme
+            Set-Theme -Mode $sysMode
+        }
+        elseif ($selected -eq "Dark") {
+            Set-Theme -Mode "Dark"
+        }
+        else {
+            Set-Theme -Mode "Light"
+        }
+        # Force refresh list to apply new text colors if items exist
+        if ($appListStack.Children.Count -gt 0) { Update-SafetySettings }
+    })
+
+# Initial Theme Apply
+$cmbTheme.SelectedIndex = 0
+$sysMode = Check-SystemTheme
+Set-Theme -Mode $sysMode
+
 
 # --- Helper Functions ---
 
 function Set-RegKey {
-    param(
-        [string]$Path,
-        [string]$Name,
-        [string]$Value, # Changed to string to handle multiple types
-        [string]$PropertyType = "DWord"
-    )
-    if (!(Test-Path $Path)) { 
-        New-Item -Path $Path -Force | Out-Null 
-    }
+    param([string]$Path, [string]$Name, [string]$Value, [string]$PropertyType = "DWord")
+    if (!(Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
     New-ItemProperty -Path $Path -Name $Name -Value $Value -PropertyType $PropertyType -Force | Out-Null
 }
 
@@ -312,27 +395,39 @@ function Disable-WinService {
     }
 }
 
-# --- Global Safety Toggle Logic ---
+# --- Safety & Logic ---
+
 function Update-SafetySettings {
     $allowUnsafe = $chkAllowUnsafeSettings.IsChecked
     
-    # 1. Toggle Advanced Tweaks
+    # Helper to create brush inline
+    $converter = New-Object System.Windows.Media.BrushConverter
+
     foreach ($chk in $advancedTweaksList) {
         $chk.IsEnabled = $allowUnsafe
         if (-not $allowUnsafe) { $chk.IsChecked = $false }
     }
-
-    # 2. Toggle Critical Apps
     foreach ($element in $appListStack.Children) {
         if ($element.GetType().Name -eq "CheckBox") {
             $pkgRawName = $element.Tag.Name
             if (Is-CriticalApp $pkgRawName) {
                 if ($allowUnsafe) {
-                    $element.IsEnabled = $true; $element.Foreground = "#D32F2F"; $element.Opacity = 1.0
+                    $element.IsEnabled = $true; $element.Opacity = 1.0
+                    if ($cmbTheme.SelectedItem.Content -eq "Dark") { 
+                        $element.Foreground = $converter.ConvertFromString("#FF6B6B")
+                    }
+                    else { 
+                        $element.Foreground = $converter.ConvertFromString("#D32F2F")
+                    }
                 }
                 else {
-                    $element.IsEnabled = $false; $element.IsChecked = $false; $element.Foreground = "#AAAAAA"; $element.Opacity = 0.6
+                    $element.IsEnabled = $false; $element.IsChecked = $false; $element.Opacity = 0.6
+                    $element.Foreground = $mainWindow.Resources["DisabledText"]
                 }
+            }
+            else {
+                # Ensure standard apps get correct theme color
+                $element.Foreground = $mainWindow.Resources["TextPrimary"]
             }
         }
     }
@@ -342,153 +437,86 @@ $chkAllowUnsafeSettings.Add_Checked({ Update-SafetySettings })
 $chkAllowUnsafeSettings.Add_Unchecked({ Update-SafetySettings })
 
 
-# --- Apply Tweaks Logic ---
+# --- Tweaks Button Logic ---
 
 $btnApplyTweaks.Add_Click({
         $btnApplyTweaks.IsEnabled = $false
         $btnApplyTweaks.Content = "Applying..."
         $window.Dispatcher.Invoke([Action] {}, [Windows.Threading.DispatcherPriority]::Background)
 
-        # --- Essentials ---
-        if ($chkTelemetry.IsChecked) {
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0
-            Disable-WinService "DiagTrack"
-            Disable-WinService "dmwappushservice"
-        }
-        if ($chkActivity.IsChecked) {
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0
-        }
-        if ($chkLocation.IsChecked) {
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "AllowLocation" -Value 0
-            Disable-WinService "lfsvc"
-        }
-        if ($chkHomeGroup.IsChecked) {
-            Disable-WinService "HomeGroupListener"
-            Disable-WinService "HomeGroupProvider"
-        }
-        if ($chkOneDrive.IsChecked) {
+        # Essentials
+        if ($chkTelemetry.IsChecked) { Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection" -Name "AllowTelemetry" -Value 0; Disable-WinService "DiagTrack"; Disable-WinService "dmwappushservice" }
+        if ($chkActivity.IsChecked) { Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "PublishUserActivities" -Value 0; Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System" -Name "UploadUserActivities" -Value 0 }
+        if ($chkLocation.IsChecked) { Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors" -Name "AllowLocation" -Value 0; Disable-WinService "lfsvc" }
+        if ($chkHomeGroup.IsChecked) { Disable-WinService "HomeGroupListener"; Disable-WinService "HomeGroupProvider" }
+        if ($chkOneDrive.IsChecked) { 
             $os = if ([Environment]::Is64BitOperatingSystem) { "SysWOW64" } else { "System32" }
-            $onedriveSetup = "$env:SystemRoot\$os\OneDriveSetup.exe"
-            if (Test-Path $onedriveSetup) { Start-Process $onedriveSetup -ArgumentList "/uninstall" -NoNewWindow -Wait }
-            Set-RegKey -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Name "System.IsPinnedToNameSpaceTree" -Value 0
+            $setup = "$env:SystemRoot\$os\OneDriveSetup.exe"
+            if (Test-Path $setup) { Start-Process $setup -ArgumentList "/uninstall" -NoNewWindow -Wait }
+            Set-RegKey -Path "HKCR:\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" -Name "System.IsPinnedToNameSpaceTree" -Value 0 
         }
 
-        # --- Miscellaneous ---
-        if ($chkSticky.IsChecked) {
-            # Disable Sticky Keys Shortcut (Shift 5x)
-            Set-RegKey -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "506" -PropertyType "String"
-        }
+        # Misc
+        if ($chkSticky.IsChecked) { Set-RegKey -Path "HKCU:\Control Panel\Accessibility\StickyKeys" -Name "Flags" -Value "506" -PropertyType "String" }
+        if ($chkHiddenFiles.IsChecked) { Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Value 1; Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Value 0 }
+        if ($chkDisableBing.IsChecked) { Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "DisableWebSearch" -Value 1; Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0 }
 
-        if ($chkHiddenFiles.IsChecked) {
-            # Show Hidden Files
-            Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Value 1
-            # Show File Extensions
-            Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Value 0
-        }
+        # Advanced
+        if ($chkRemoveEdge.IsChecked) { Get-AppxPackage *Edge* | Remove-AppxPackage -ErrorAction SilentlyContinue; Set-RegKey -Path "HKLM:\SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1 }
+        if ($chkTrackingAggressive.IsChecked) { Disable-WinService "WerSvc"; Disable-WinService "PcaSvc" }
+        if ($chkDisableUAC.IsChecked) { Set-RegKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 }
+        if ($chkDisableNotif.IsChecked) { if (!(Test-Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer")) { New-Item -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Force | Out-Null }; Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter" -Value 1 -Type DWord -Force }
 
-        if ($chkDisableBing.IsChecked) {
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "DisableWebSearch" -Value 1
-            Set-RegKey -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search" -Name "ConnectedSearchUseWeb" -Value 0
-            Set-RegKey -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search" -Name "BingSearchEnabled" -Value 0
-        }
-
-        # --- Advanced (Aggressive) ---
-        if ($chkRemoveEdge.IsChecked) {
-            Get-AppxPackage *Edge* | Remove-AppxPackage -ErrorAction SilentlyContinue
-            Set-RegKey -Path "HKLM:\SOFTWARE\Microsoft\EdgeUpdate" -Name "DoNotUpdateToEdgeWithChromium" -Value 1
-        }
-        if ($chkTrackingAggressive.IsChecked) {
-            Disable-WinService "WerSvc"
-            Disable-WinService "PcaSvc"
-        }
-        if ($chkDisableUAC.IsChecked) {
-            Set-RegKey -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0
-        }
-        if ($chkDisableNotif.IsChecked) {
-            if (!(Test-Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer")) { New-Item -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Force | Out-Null }
-            Set-ItemProperty -Path "HKCU:\Software\Policies\Microsoft\Windows\Explorer" -Name "DisableNotificationCenter" -Value 1 -Type DWord -Force
-        }
-
-        Start-Sleep -Seconds 1 
-    
+        Start-Sleep -Seconds 1
         [System.Windows.MessageBox]::Show("The selected tweaks have been applied.", "Success")
-    
-        $btnApplyTweaks.Content = "Apply Tweaks"
-        $btnApplyTweaks.IsEnabled = $true
+        $btnApplyTweaks.Content = "Apply Tweaks"; $btnApplyTweaks.IsEnabled = $true
     })
 
-
 # --- Debloat Logic ---
+$criticalApps = @("Microsoft.WindowsStore", "Microsoft.StorePurchaseApp", "Microsoft.DesktopAppInstaller", "Microsoft.Services.Store.Engagement", "Microsoft.XboxApp", "Microsoft.XboxIdentityProvider", "Microsoft.XboxGamingOverlay")
 
-$criticalApps = @(
-    "Microsoft.WindowsStore", "Microsoft.StorePurchaseApp", "Microsoft.DesktopAppInstaller",
-    "Microsoft.Services.Store.Engagement", "Microsoft.XboxApp", "Microsoft.XboxIdentityProvider", "Microsoft.XboxGamingOverlay"
-)
-
-function Is-CriticalApp($appName) {
-    if ([string]::IsNullOrEmpty($appName)) { return $false }
-    return ($criticalApps -contains $appName)
-}
-
-function Get-CleanAppName($rawName) {
-    if (-not $rawName) { return "Unknown App" }
-    $clean = $rawName -replace "^Microsoft\.", "" -replace "^Windows\.", "" -replace "\.", " "
-    return $clean
-}
+function Is-CriticalApp($appName) { if ([string]::IsNullOrEmpty($appName)) { return $false }; return ($criticalApps -contains $appName) }
+function Get-CleanAppName($rawName) { if (-not $rawName) { return "Unknown App" }; $clean = $rawName -replace "^Microsoft\.", "" -replace "^Windows\.", "" -replace "\.", " "; return $clean }
 
 function Load-StoreApps {
     $appListStack.Children.Clear()
     $loadingText = New-Object System.Windows.Controls.TextBlock
     $loadingText.Text = "Loading packages..."
-    $loadingText.Foreground = "#888"; $loadingText.HorizontalAlignment = "Center"
+    $loadingText.Foreground = $mainWindow.Resources["DisabledText"]; $loadingText.HorizontalAlignment = "Center"
     [void]$appListStack.Children.Add($loadingText)
     $window.Dispatcher.Invoke([Action] {}, [Windows.Threading.DispatcherPriority]::Background)
     
-    $apps = Get-AppxPackage | Where-Object { 
-        $_.IsFramework -eq $false -and $_.NonRemovable -eq $false -and $_.SignatureKind -ne "System" -and $_.Name -notlike "*Edge*" 
-    } | Sort-Object Name
-
+    $apps = Get-AppxPackage | Where-Object { $_.IsFramework -eq $false -and $_.NonRemovable -eq $false -and $_.SignatureKind -ne "System" -and $_.Name -notlike "*Edge*" } | Sort-Object Name
     $appListStack.Children.Clear()
 
-    if ($apps.Count -eq 0) {
-        $msg = New-Object System.Windows.Controls.TextBlock; $msg.Text = "No removable packages found."; [void]$appListStack.Children.Add($msg); return
-    }
+    if ($apps.Count -eq 0) { $msg = New-Object System.Windows.Controls.TextBlock; $msg.Text = "No removable packages found."; [void]$appListStack.Children.Add($msg); return }
 
     foreach ($app in $apps) {
         $chk = New-Object System.Windows.Controls.CheckBox
         $chk.Content = Get-CleanAppName $app.Name
         $chk.Tag = @{ FullName = $app.PackageFullName; Name = $app.Name }
         $chk.Margin = "0,3,0,3"
-        if (Is-CriticalApp $app.Name) { 
-            # Logic: No "[LOCKED]" text, just disabled state
-            $chk.Foreground = "#AAAAAA"
-            $chk.IsEnabled = $false 
-        }
+        if (Is-CriticalApp $app.Name) { $chk.Foreground = $mainWindow.Resources["DisabledText"]; $chk.IsEnabled = $false }
+        else { $chk.Foreground = $mainWindow.Resources["TextPrimary"] }
         [void]$appListStack.Children.Add($chk)
     }
     Update-SafetySettings
 }
 
 $btnRefreshApps.Add_Click({ Load-StoreApps })
-
 $btnRemoveApps.Add_Click({
         $appsToRemove = $appListStack.Children | Where-Object { $_.GetType().Name -eq "CheckBox" -and $_.IsChecked }
         if ($appsToRemove.Count -eq 0) { [System.Windows.MessageBox]::Show("Please select at least one package."); return }
-    
         $confirm = [System.Windows.MessageBox]::Show("Remove $($appsToRemove.Count) packages?", "Confirm", [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Warning)
         if ($confirm -eq 'Yes') {
-            $progressBar.Visibility = "Visible"; $progressBar.Maximum = $appsToRemove.Count; $progressBar.Value = 0
-            $btnRemoveApps.IsEnabled = $false
-        
+            $progressBar.Visibility = "Visible"; $progressBar.Maximum = $appsToRemove.Count; $progressBar.Value = 0; $btnRemoveApps.IsEnabled = $false
             foreach ($chk in $appsToRemove) {
                 $window.Dispatcher.Invoke([Action] {}, [Windows.Threading.DispatcherPriority]::Background)
                 try { Remove-AppxPackage -Package $chk.Tag.FullName -ErrorAction Stop; [void]$appListStack.Children.Remove($chk) }
                 catch { $chk.Foreground = "Orange"; $chk.IsChecked = $false }
                 $progressBar.Value++
             }
-            $progressBar.Visibility = "Collapsed"; $btnRemoveApps.IsEnabled = $true
-            [System.Windows.MessageBox]::Show("Debloat process completed.")
+            $progressBar.Visibility = "Collapsed"; $btnRemoveApps.IsEnabled = $true; [System.Windows.MessageBox]::Show("Debloat process completed.")
         }
     })
 
